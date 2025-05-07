@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -13,7 +13,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
 
-// Token cache implementation for Clerk
 const tokenCache = {
   async getToken(key: string) {
     try {
@@ -31,28 +30,48 @@ const tokenCache = {
   },
 };
 
-// Authentication context provider to control access to protected routes
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const segments = useSegments();
   const router = useRouter();
+  
+  // Simulate onboarding completion. In a real app, this would come from Clerk user.unsafeMetadata or your DB.
+  const [onboardingCompleted, setOnboardingCompleted] = useState(() => {
+    return user?.unsafeMetadata?.onboardingCompleted === true;
+  });
 
   useEffect(() => {
     if (!isLoaded) return;
 
-    const inTabsGroup = segments[0] === '(tabs)';
-
-    // Handle the routing based on authentication state
-    if (isSignedIn && !inTabsGroup) {
-      router.replace('/(tabs)');
-    } else if (!isSignedIn && inTabsGroup) {
-      router.replace('/sign-in');
+    // Update onboardingCompleted state if user metadata changes during the session
+    if (user?.unsafeMetadata?.onboardingCompleted !== undefined && 
+        user.unsafeMetadata.onboardingCompleted !== onboardingCompleted) {
+      setOnboardingCompleted(user.unsafeMetadata.onboardingCompleted as boolean);
     }
-  }, [isLoaded, isSignedIn, segments, router]);
 
-  // Show loading indicator while checking authentication status
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inOnboardingGroup = segments[0] === '(onboarding)';
+
+    if (isSignedIn) {
+      if (!onboardingCompleted && !inOnboardingGroup) {
+        console.log("Redirecting to onboarding as it is not completed and user is not in onboarding group.");
+        router.replace('/(onboarding)'); // Default to index of onboarding group
+      } else if (onboardingCompleted && !inTabsGroup) {
+        console.log("Redirecting to tabs as onboarding is completed and user is not in tabs group.");
+        router.replace('/(tabs)'); // Default to index of tabs group
+      }
+      // If user is in the correct group (e.g. signed in, onboarding not done, and in onboarding group), do nothing.
+    } else { // Not signed in
+      // If not signed in and trying to access a protected route (onboarding or tabs), redirect to sign-in
+      if (inTabsGroup || inOnboardingGroup) {
+        console.log("Redirecting to sign-in as user is not signed in and tried to access a protected route.");
+        router.replace('/sign-in');
+      }
+    }
+  }, [isLoaded, isSignedIn, user, onboardingCompleted, segments, router]);
+
   if (!isLoaded) {
-    return null;
+    return null; // Or a global loading screen
   }
 
   return <>{children}</>;
@@ -64,10 +83,8 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (loaded) {
-      // Hide the splash screen after the fonts have loaded and the UI is ready
       SplashScreen.hideAsync();
     }
   }, [loaded]);
@@ -76,23 +93,19 @@ export default function RootLayout() {
     return null;
   }
 
-  // Try reading from process.env first, then fallback to Constants.expoConfig.extra
   const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 
     Constants.expoConfig?.extra?.clerkPublishableKey || 
-    "pk_test_ZXF1YWwtc29sZS0yOS5jbGVyay5hY2NvdW50cy5kZXYk"; // Hardcoded fallback
-
-  console.log("Debug: Constants.expoConfig?.extra", JSON.stringify(Constants.expoConfig?.extra));
-  console.log("Debug: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY", process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
-  console.log("Final publishableKey being used:", publishableKey);
+    "pk_test_ZXF1YWwtc29sZS0yOS5jbGVyay5hY2NvdW50cy5kZXYk";
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AuthProvider>
-          <Stack>
-            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="sign-in" />
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" />
           </Stack>
         </AuthProvider>
         <StatusBar style="auto" />
