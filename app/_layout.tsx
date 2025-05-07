@@ -87,3 +87,27 @@ const InitialLayout = () => {
 };
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+  const [loaded] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+
+  if (!loaded) {
+    return null;
+  }
+
+  const publishableKey = Constants.expoConfig?.extra?.clerkPublishableKey;
+
+  if (!publishableKey) {
+    throw new Error("Missing Clerk Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in .env");
+  }
+
+  return (
+    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <InitialLayout />
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </ClerkProvider>
+  );
+}
