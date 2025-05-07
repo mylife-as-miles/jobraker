@@ -2,7 +2,7 @@ import { ClerkProvider, useUser } from "@clerk/clerk-expo";
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import Constants from "expo-constants";
 import { useFonts } from 'expo-font';
-import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
+import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
@@ -10,6 +10,10 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
+// Prevent the splash screen from auto-hiding before asset loading is complete
+SplashScreen.preventAutoHideAsync();
+
+// Token cache implementation for Clerk
 const tokenCache = {
   async getToken(key: string) {
     try {
@@ -27,7 +31,8 @@ const tokenCache = {
   },
 };
 
-const InitialLayout = () => {
+// Authentication context provider to control access to protected routes
+function AuthProvider({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useUser();
   const segments = useSegments();
   const router = useRouter();
@@ -37,53 +42,21 @@ const InitialLayout = () => {
 
     const inTabsGroup = segments[0] === '(tabs)';
 
+    // Handle the routing based on authentication state
     if (isSignedIn && !inTabsGroup) {
-      router.replace('/(tabs)/index'); // Or your default signed-in screen
+      router.replace('/(tabs)');
     } else if (!isSignedIn && inTabsGroup) {
       router.replace('/sign-in');
     }
   }, [isLoaded, isSignedIn, segments, router]);
 
+  // Show loading indicator while checking authentication status
   if (!isLoaded) {
-    // Optionally, return a loading indicator here
     return null;
   }
 
-  // Conditionally render based on sign-in state
-  // This structure assumes sign-in is a modal or separate stack
-  // If sign-in is part of the main stack, this logic might need adjustment
-  if (!isSignedIn) {
-    // If not signed in, and not already on the sign-in screen, redirect.
-    // This also handles the case where the initial route is protected.
-    if (segments[0] !== 'sign-in') {
-        // Can't use router.replace here during initial render of a navigator.
-        // Stack.Screen for sign-in will handle displaying it.
-    }
-    return (
-        <Stack>
-            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-            {/* Redirect non-matching routes for signed-out users to sign-in */}
-            <Stack.Screen name="+not-found" options={{}} />
-            {/* Add a catch-all to redirect to sign-in if trying to access other routes when signed out */}
-            {segments[0] !== 'sign-in' && <Stack.Screen name="[...missing]">
-                {() => <Redirect href="/sign-in" />}
-            </Stack.Screen>}
-        </Stack>
-    );
-  }
-
-  // User is signed in, render the main app layout
-  return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="+not-found" />
-      {/* If somehow sign-in is accessed while signed in, redirect to tabs */}
-      <Stack.Screen name="sign-in">
-        {() => <Redirect href="/(tabs)/index" />}
-      </Stack.Screen>
-    </Stack>
-  );
-};
+  return <>{children}</>;
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -91,20 +64,37 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  useEffect(() => {
+    if (loaded) {
+      // Hide the splash screen after the fonts have loaded and the UI is ready
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
   if (!loaded) {
     return null;
   }
 
-  const publishableKey = Constants.expoConfig?.extra?.clerkPublishableKey;
+  // Try reading from process.env first, then fallback to Constants.expoConfig.extra
+  const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 
+    Constants.expoConfig?.extra?.clerkPublishableKey || 
+    "pk_test_ZXF1YWwtc29sZS0yOS5jbGVyay5hY2NvdW50cy5kZXYk"; // Hardcoded fallback
 
-  if (!publishableKey) {
-    throw new Error("Missing Clerk Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in .env");
-  }
+  console.log("Debug: Constants.expoConfig?.extra", JSON.stringify(Constants.expoConfig?.extra));
+  console.log("Debug: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY", process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  console.log("Final publishableKey being used:", publishableKey);
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <InitialLayout />
+        <AuthProvider>
+          <Stack>
+            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+          </Stack>
+        </AuthProvider>
         <StatusBar style="auto" />
       </ThemeProvider>
     </ClerkProvider>
