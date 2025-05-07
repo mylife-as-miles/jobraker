@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { Text, View, StyleSheet, Pressable, Platform } from 'react-native';
-import { useOAuth } from '@clerk/clerk-expo';
-import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser';
-import * as WebBrowser from "expo-web-browser";
 import { Colors } from '@/constants/Colors'; // Assuming Colors.ts is in constants
+import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser';
+import { useOAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons'; // For icons
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, Extrapolate } from 'react-native-reanimated';
+import * as WebBrowser from "expo-web-browser";
+import React, { useEffect } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 WebBrowser.maybeCompleteAuthSession();
 
