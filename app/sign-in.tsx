@@ -1,8 +1,8 @@
-import React from 'react';
-import { Text, View, Button, StyleSheet } from 'react-native';
-import { useOAuth } from '@clerk/clerk-expo';
 import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser'; // Assuming you'll create this hook
+import { useOAuth } from '@clerk/clerk-expo';
 import * as WebBrowser from "expo-web-browser";
+import React from 'react';
+import { Button, StyleSheet, Text, View } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
 

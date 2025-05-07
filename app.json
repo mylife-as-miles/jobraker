@@ -37,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "clerkPublishableKey": "pk_test_ZXF1YWwtc29sZS0yOS5jbGVyay5hY2NvdW50cy5kZXYk",
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
     }
   }
 }

@@ -1,6 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import React from 'react';
 
 // Silence the warning about missing HMR annd such
 WebBrowser.maybeCompleteAuthSession();

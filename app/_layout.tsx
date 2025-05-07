@@ -1,15 +1,14 @@
-import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
+import { ClerkProvider, useUser } from "@clerk/clerk-expo";
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import Constants from "expo-constants";
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments, Redirect } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from "expo-secure-store";
-import 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
+import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import SignInScreen from "./sign-in"; // Import the sign-in screen
 
 const tokenCache = {
   async getToken(key: string) {
