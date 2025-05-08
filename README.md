@@ -1,53 +1,101 @@
 > Edited for use in IDX on 07/09/12
 
-# Welcome to your Expo app 👋
+# Jobraker - Job Application Automation App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
 
-## Get started
+Jobraker is a mobile application that simplifies and automates the job search and application process. It combines job search capabilities with Adzuna and automated application submission through Skyvern to help users apply to jobs with minimal effort.
 
-#### Android
+## Key Features
 
-Android previews are defined as a `workspace.onStart` hook and started as a vscode task when the workspace is opened/started.
+- **Authentication**: Secure user authentication using Clerk with email and social login options
+- **Job Search**: Find relevant job listings through Adzuna API integration
+- **Automated Applications**: Submit applications automatically with Skyvern integration
+- **Profile Management**: Manage your personal information, resume, and job preferences
+- **Application Tracking**: Monitor the status and progress of your job applications
 
-Note, if you can't find the task, either:
-- Rebuild the environment (using command palette: `IDX: Rebuild Environment`), or
-- Run `npm run android -- --tunnel` command manually run android and see the output in your terminal. The device should pick up this new command and switch to start displaying the output from it.
+## Technology Stack
 
-In the output of this command/task, you'll find options to open the app in a
+- **Frontend**: React Native/Expo with TypeScript
+- **Backend-as-a-Service**: Supabase (PostgreSQL database, storage, edge functions)
+- **Authentication**: Clerk for user management and JWT-based auth
+- **API Integrations**: 
+  - Adzuna API for job search and listings
+  - Skyvern API for automated application submission
+- **UI/UX**: NativeWind (planned), React Native Reanimated, Expo's UI components
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Project Structure
 
-You'll also find options to open the app's developer menu, reload the app, and more.
+- `/app`: Screens and navigation using Expo Router's file-based routing
+  - `/(tabs)`: Main tab screens (Home, Explore, Applications, Profile)
+  - `/(onboarding)`: User onboarding flow screens
+  - `/profile`: Profile-related screens like edit profile, preferences
+- `/components`: Reusable UI components (ThemedText, ThemedView, etc.)
+- `/hooks`: Custom React hooks for state management and UI logic
+- `/services`: API service classes for Supabase, Adzuna, and Skyvern
+- `/utils`: Helper functions including Supabase client configuration
+- `/assets`: Static assets including images and fonts
+- `/implemention_docs`: Detailed documentation for the project
 
-#### Web
+## Getting Started
 
-Web previews will be started and managred automatically. Use the toolbar to manually refresh.
+### Prerequisites
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- Node.js (v16+)
+- Expo CLI
+- Clerk account and API keys
+- Supabase account and API keys
 
-## Get a fresh project
+### Installation
 
-When you're ready, run:
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables:
+   - Create a `.env` file with your Supabase and Clerk credentials
+
+### Running the App
 
 ```bash
-npm run reset-project
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Development
 
-## Learn more
+The Jobraker app follows a phased implementation approach as outlined in the implementation documents located in `/implemention_docs`. Development is guided by detailed specifications in `app_flow.md`, `backend_structure.md`, and `blueprint.md`.
 
-To learn more about developing your project with Expo, look at the following resources:
+### Current Status (May 8, 2025)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The app currently has the following features implemented:
+- Complete navigation structure with tabs and proper routing
+- Authentication with Clerk (sign-in, sign-up, sign-out)
+- User onboarding flow with multi-step profile setup
+- Applications tracking UI with status visualization
+- Profile management with resume upload capabilities
+- Proper theme support (light/dark mode)
 
-## Join the community
+### Next Steps
 
-Join our community of developers creating universal apps.
+- Complete Supabase backend integration
+  - Set up database tables as defined in backend_structure.md
+  - Implement Row Level Security policies
+  - Configure storage for resumes
+- Implement Adzuna API integration for job search
+- Set up Skyvern automated application submission
+- Enhance application tracking with real-time updates
+- Add analytics dashboard for application metrics
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Documentation
+
+Detailed documentation is available in the `/implemention_docs` folder:
+- `Jobraker_PRD.markdown`: Product Requirements Document
+- `app_flow.md`: User flows and screen descriptions
+- `backend_structure.md`: Database schema and backend configuration
+- `blueprint.md`: Technical blueprint and system design
+- `tech_stack.md`: Technology stack details
+
+## License
+
+[License information goes here]
