@@ -1,16 +1,20 @@
-import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useUser } from '@clerk/clerk-expo';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+
+// Fix imports to use named exports instead of default exports
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import useSupabase from '@/hooks/useSupabase';
+import { uploadResume } from '@/services/storageService';
+import { UserPreferences } from '@/services/userService';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 
-import ThemedText from '@/components/ThemedText';
-import ThemedView from '@/components/ThemedView';
-import useSupabase from '@/hooks/useSupabase';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { deleteResume, getResumeUrl, uploadResume } from '@/services/storageService';
-import { UserPreferences, getUserPreferences, upsertUserProfile } from '@/services/userService';
+import { deleteResume, getResumeUrl } from '@/services/storageService';
+import { getUserPreferences, upsertUserProfile } from '@/services/userService';
 import { Ionicons } from '@expo/vector-icons';
 
 // Section component for profile sections
