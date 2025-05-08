@@ -1,4 +1,4 @@
-import { ClerkProvider, useUser } from "@clerk/clerk-expo";
+import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import Constants from "expo-constants";
 import { useFonts } from 'expo-font';
@@ -32,11 +32,12 @@ const tokenCache = {
 };
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded, isSignedIn, user, getToken } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   
-  // Simulate onboarding completion. In a real app, this would come from Clerk user.unsafeMetadata or your DB.
+  // Track onboarding completion status
   const [onboardingCompleted, setOnboardingCompleted] = useState(() => {
     return user?.unsafeMetadata?.onboardingCompleted === true;
   });
@@ -46,7 +47,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     const syncSupabaseAuth = async () => {
       if (isLoaded && isSignedIn && user) {
         try {
-          // Get JWT token from Clerk
+          // Get JWT token from Clerk with the supabase template
           const token = await getToken({ template: 'supabase' });
           
           // Set the token in Supabase client
@@ -71,17 +72,14 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       setOnboardingCompleted(user.unsafeMetadata.onboardingCompleted as boolean);
     }
 
-    // Check current route group - using type assertion to avoid TypeScript errors
+    // Check current route group
     const firstSegment = segments[0] as string;
     const inTabsGroup = firstSegment === '(tabs)';
-    // TypeScript thinks segments[0] can only be one of the known values, 
-    // but at runtime, it could be '(onboarding)' as well
     const inOnboardingGroup = firstSegment === '(onboarding)';
 
     if (isSignedIn) {
       if (!onboardingCompleted && !inOnboardingGroup) {
         console.log("Redirecting to onboarding");
-        // Type assertion to tell TypeScript this is a valid path
         router.navigate({
           pathname: '/(onboarding)' as any
         });
