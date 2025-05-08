@@ -1,15 +1,13 @@
 import { useUser } from '@clerk/clerk-expo';
-import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import ThemedText from '@/components/ThemedText';
-import ThemedView from '@/components/ThemedView';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { uploadResume } from '@/services/storageService';
+// Fix imports to use named exports instead of default exports
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { upsertUserPreferences, upsertUserProfile } from '@/services/userService';
-import { TextInput } from 'react-native-gesture-handler';
+import { KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 
 type OnboardingStep = 'personal-info' | 'job-preferences' | 'resume-upload' | 'complete';
 

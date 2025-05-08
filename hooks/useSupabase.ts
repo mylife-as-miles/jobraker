@@ -1,22 +1,14 @@
 import { getUserProfile, UserProfile } from '@/services/userService';
 import { setSupabaseToken, supabase } from '@/utils/supabase';
-import { useUser } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useEffect, useState } from 'react';
-
-// Type for the useUser hook return with getToken added
-type UserReturnWithToken = ReturnType<typeof useUser> & {
-  getToken: (options: { template: string }) => Promise<string>;
-};
 
 /**
  * Hook to handle Supabase authentication and provide access to the user's profile
  */
 export default function useSupabase() {
-  // Use the native useUser hook but type assert it to include getToken
-  const clerk = useUser();
-  const getToken = clerk.getToken as (options: { template: string }) => Promise<string>;
-  const { user } = clerk;
-  
+  const { user } = useUser();
+  const { getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
