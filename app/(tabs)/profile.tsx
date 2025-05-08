@@ -1,31 +1,36 @@
-import { useUser } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import * as DocumentPicker from 'expo-document-picker';
+import * as Haptics from 'expo-haptics';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 // Fix imports to use named exports instead of default exports
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import useSupabase from '@/hooks/useSupabase';
-import { uploadResume } from '@/services/storageService';
-import { UserPreferences } from '@/services/userService';
-import * as DocumentPicker from 'expo-document-picker';
-import * as Haptics from 'expo-haptics';
-import { Stack, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-
-import { deleteResume, getResumeUrl } from '@/services/storageService';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { deleteResume, getResumeUrl, uploadResume } from '@/services/storageService';
 import { getUserPreferences, upsertUserProfile } from '@/services/userService';
 import { Ionicons } from '@expo/vector-icons';
+
+// Custom UserPreferences interface that matches the state we're using
+interface ProfileUserPreferences {
+  desiredRole?: string;
+  targetSalary?: string;
+  location?: string;
+  workArrangement?: string;
+}
 
 // Section component for profile sections
 const ProfileSection = ({ 
   title, 
   children, 
-  onPress = null
+  onPress = undefined
 }: { 
   title: string, 
   children: React.ReactNode, 
-  onPress?: (() => void) | null
+  onPress?: (() => void) | undefined
 }) => {
   const backgroundColor = useThemeColor({}, 'card');
   
@@ -57,7 +62,7 @@ export default function ProfileScreen() {
     uploadDate: '',
     url: '',
   });
-  const [preferences, setPreferences] = useState<Partial<UserPreferences>>({});
+  const [preferences, setPreferences] = useState<ProfileUserPreferences>({});
 
   // Load user preferences and resume data
   useEffect(() => {
@@ -229,7 +234,7 @@ export default function ProfileScreen() {
               // Update user profile
               await upsertUserProfile({
                 id: user.id,
-                resume_url: null,
+                resume_url: undefined, // Changed from null to undefined
               });
               
               // Refresh profile
@@ -254,14 +259,18 @@ export default function ProfileScreen() {
   const handleEditPersonalInfo = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // In the future, this would navigate to a personal info edit screen
-    router.push('/profile/edit-personal-info');
+    router.push({
+      pathname: "/profile/edit-personal-info" as any
+    });
   };
 
   const handleEditJobPreferences = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('edit_job_preferences_opened');
     // In the future, this would navigate to job preferences edit screen
-    router.push('/profile/edit-job-preferences');
+    router.push({
+      pathname: "/profile/edit-job-preferences" as any
+    });
   };
 
   const handleDeleteAccount = () => {
