@@ -9,6 +9,7 @@ import React, { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { setSupabaseToken } from '@/utils/supabase';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -31,7 +32,7 @@ const tokenCache = {
 };
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user, getToken } = useUser();
   const segments = useSegments();
   const router = useRouter();
   
@@ -40,38 +41,66 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     return user?.unsafeMetadata?.onboardingCompleted === true;
   });
 
+  // Synchronize Clerk JWT with Supabase
+  useEffect(() => {
+    const syncSupabaseAuth = async () => {
+      if (isLoaded && isSignedIn && user) {
+        try {
+          // Get JWT token from Clerk
+          const token = await getToken({ template: 'supabase' });
+          
+          // Set the token in Supabase client
+          await setSupabaseToken(token);
+          
+          console.log('Supabase auth synchronized with Clerk');
+        } catch (error) {
+          console.error('Error synchronizing Supabase auth:', error);
+        }
+      }
+    };
+    
+    syncSupabaseAuth();
+  }, [isLoaded, isSignedIn, user, getToken]);
+
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Update onboardingCompleted state if user metadata changes during the session
+    // Update onboardingCompleted state if user metadata changes
     if (user?.unsafeMetadata?.onboardingCompleted !== undefined && 
         user.unsafeMetadata.onboardingCompleted !== onboardingCompleted) {
       setOnboardingCompleted(user.unsafeMetadata.onboardingCompleted as boolean);
     }
 
-    const inTabsGroup = segments[0] === '(tabs)';
-    const inOnboardingGroup = segments[0] === '(onboarding)';
+    // Check current route group - using type assertion to avoid TypeScript errors
+    const firstSegment = segments[0] as string;
+    const inTabsGroup = firstSegment === '(tabs)';
+    // TypeScript thinks segments[0] can only be one of the known values, 
+    // but at runtime, it could be '(onboarding)' as well
+    const inOnboardingGroup = firstSegment === '(onboarding)';
 
     if (isSignedIn) {
       if (!onboardingCompleted && !inOnboardingGroup) {
-        console.log("Redirecting to onboarding as it is not completed and user is not in onboarding group.");
-        router.replace('/(onboarding)'); // Default to index of onboarding group
+        console.log("Redirecting to onboarding");
+        // Type assertion to tell TypeScript this is a valid path
+        router.navigate({
+          pathname: '/(onboarding)' as any
+        });
       } else if (onboardingCompleted && !inTabsGroup) {
-        console.log("Redirecting to tabs as onboarding is completed and user is not in tabs group.");
-        router.replace('/(tabs)'); // Default to index of tabs group
+        console.log("Redirecting to tabs");
+        router.navigate({
+          pathname: '/(tabs)' as any
+        });
       }
-      // If user is in the correct group (e.g. signed in, onboarding not done, and in onboarding group), do nothing.
     } else { // Not signed in
-      // If not signed in and trying to access a protected route (onboarding or tabs), redirect to sign-in
       if (inTabsGroup || inOnboardingGroup) {
-        console.log("Redirecting to sign-in as user is not signed in and tried to access a protected route.");
-        router.replace('/sign-in');
+        console.log("Redirecting to sign-in");
+        router.navigate('/sign-in');
       }
     }
   }, [isLoaded, isSignedIn, user, onboardingCompleted, segments, router]);
 
   if (!isLoaded) {
-    return null; // Or a global loading screen
+    return null;
   }
 
   return <>{children}</>;
@@ -103,6 +132,7 @@ export default function RootLayout() {
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="sign-in" />
+            <Stack.Screen name="sign-up" />
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="+not-found" />
