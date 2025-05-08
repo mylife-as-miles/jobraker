@@ -1,20 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
-import * as SecureStore from 'expo-secure-store';
 import 'react-native-url-polyfill/auto';
-
-// SecureStore adapter for Supabase auth state persistence
-const ExpoSecureStoreAdapter = {
-  getItem: (key: string) => {
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: (key: string, value: string) => {
-    return SecureStore.setItemAsync(key, value);
-  },
-  removeItem: (key: string) => {
-    return SecureStore.deleteItemAsync(key);
-  },
-};
 
 // Get Supabase URL and anon key from environment variables or Constants
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 
@@ -25,10 +12,10 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   Constants.expoConfig?.extra?.supabaseAnonKey || 
   'your-anon-key'; // Replace with your Supabase anon key in production
 
-// Create Supabase client
+// Create Supabase client with AsyncStorage
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: ExpoSecureStoreAdapter,
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
