@@ -62,7 +62,7 @@ const ApplicationCard = ({ application }: { application: Application }) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Navigate to application details screen
     router.push({
-      pathname: "/application-details" as any,
+      pathname: "/application-details",
       params: { id: application.id }
     });
     
