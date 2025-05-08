@@ -1,14 +1,16 @@
-import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
 
-import ThemedText from '@/components/ThemedText';
-import ThemedView from '@/components/ThemedView';
+// Fix imports to use named exports instead of default exports
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import useSupabase from '@/hooks/useSupabase';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Application, ApplicationStatus, getUserApplications } from '@/services/applicationService';
 import { useUser } from '@clerk/clerk-expo';
+import * as Haptics from 'expo-haptics';
+import { RefreshControl, TouchableOpacity, View } from 'react-native';
 
 // Helper function to get a human-readable status
 const getStatusText = (status: ApplicationStatus) => {
