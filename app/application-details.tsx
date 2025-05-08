@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -283,13 +283,12 @@ export default function ApplicationDetailsScreen() {
             <View style={styles.notesEditContainer}>
               <ScrollView style={styles.notesTextAreaWrapper}>
                 <View style={styles.textAreaContainer}>
-                  <ThemedText
-                    style={styles.textArea}
+                  <TextInput
+                    style={[styles.textArea, { color: useThemeColor({}, 'text') }]}
                     onChangeText={setNotes}
                     multiline
-                  >
-                    {notes}
-                  </ThemedText>
+                    value={notes}
+                  />
                 </View>
               </ScrollView>
               
