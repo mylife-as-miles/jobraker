@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, GestureResponderEvent, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 // Fix imports to use named exports instead of default exports
 import { ThemedText } from '@/components/ThemedText';
@@ -15,11 +15,16 @@ import { getUserPreferences, upsertUserProfile } from '@/services/userService';
 import { Ionicons } from '@expo/vector-icons';
 
 // Custom UserPreferences interface that matches the state we're using
-interface ProfileUserPreferences {
+interface UserPreferences {
   desiredRole?: string;
   targetSalary?: string;
   location?: string;
   workArrangement?: string;
+  work_arrangement?: string[];
+  preferred_job_titles?: string[];
+  salary_min?: number;
+  salary_max?: number;
+  target_locations?: { city: string; state?: string; country?: string }[];
 }
 
 // Section component for profile sections
@@ -30,7 +35,7 @@ const ProfileSection = ({
 }: { 
   title: string, 
   children: React.ReactNode, 
-  onPress?: (() => void) | undefined
+  onPress?: ((event: GestureResponderEvent) => void) | undefined
 }) => {
   const backgroundColor = useThemeColor({}, 'card');
   
@@ -62,7 +67,7 @@ export default function ProfileScreen() {
     uploadDate: '',
     url: '',
   });
-  const [preferences, setPreferences] = useState<ProfileUserPreferences>({});
+  const [preferences, setPreferences] = useState<UserPreferences>({});
 
   // Load user preferences and resume data
   useEffect(() => {
@@ -259,22 +264,18 @@ export default function ProfileScreen() {
   const handleEditPersonalInfo = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // In the future, this would navigate to a personal info edit screen
-    router.push({
-      pathname: "/profile/edit-personal-info" as any
-    });
+    router.push("/profile/edit-personal-info" as any);
   };
 
   const handleEditJobPreferences = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('edit_job_preferences_opened');
     // In the future, this would navigate to job preferences edit screen
-    router.push({
-      pathname: "/profile/edit-job-preferences" as any
-    });
+    router.push("/profile/edit-job-preferences" as any);
   };
 
   const handleDeleteAccount = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Haptics.impactAsync(Haptics.NotificationFeedbackType.Heavy);
     
     Alert.alert(
       'Delete Account',
