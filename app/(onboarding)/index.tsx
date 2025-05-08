@@ -2,11 +2,13 @@ import { useUser } from '@clerk/clerk-expo';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import ThemedText from '@/components/ThemedText';
+import ThemedView from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { uploadResume } from '@/services/storageService';
+import { upsertUserPreferences, upsertUserProfile } from '@/services/userService';
 import { TextInput } from 'react-native-gesture-handler';
 
 type OnboardingStep = 'personal-info' | 'job-preferences' | 'resume-upload' | 'complete';
@@ -29,6 +31,7 @@ export default function OnboardingScreen() {
     workArrangement: '',
     resume: null as { name: string; uri: string } | null,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const updateFormField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -99,30 +102,90 @@ export default function OnboardingScreen() {
   };
 
   const completeOnboarding = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'User information is missing. Please try again or contact support.');
+      return;
+    }
+    
+    setIsLoading(true);
+    
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // In a real implementation, this would save all data to Supabase
-      console.log('Onboarding data to be saved:', formData);
+      // 1. Save user profile to Supabase
+      await upsertUserProfile({
+        id: user.id,
+        clerk_user_id: user.id,
+        full_name: formData.fullName,
+        email: user.primaryEmailAddress?.emailAddress,
+        phone_number: formData.phoneNumber,
+        location: formData.location,
+      });
       
-      // Update Clerk user metadata to mark onboarding as complete
-      if (user) {
-        await user.update({
-          unsafeMetadata: {
-            ...user.unsafeMetadata,
-            onboardingCompleted: true,
-            phoneNumber: formData.phoneNumber,
-            location: formData.location,
-          },
-        });
+      // 2. Parse salary string to get min/max values
+      let salaryMin: number | null = null;
+      let salaryMax: number | null = null;
+      
+      if (formData.targetSalary) {
+        // Handle formats like "80000" or "80k" or "$80,000" or "80,000-100,000" or "$80k-$100k"
+        const sanitized = formData.targetSalary.replace(/[$,]/g, '');
+        const parts = sanitized.split('-');
         
-        console.log('new_user_onboarding_completed');
-        
-        // The AuthProvider in _layout.tsx will handle redirection to the main app
+        if (parts.length > 0) {
+          const minPart = parts[0].trim().toLowerCase();
+          salaryMin = parseInt(minPart.replace('k', '000'));
+          
+          if (parts.length > 1) {
+            const maxPart = parts[1].trim().toLowerCase();
+            salaryMax = parseInt(maxPart.replace('k', '000'));
+          }
+        }
       }
+      
+      // 3. Save user preferences to Supabase
+      await upsertUserPreferences({
+        user_id: user.id,
+        preferred_job_titles: formData.desiredJobTitle.split(',').map(title => title.trim()),
+        salary_min: salaryMin,
+        salary_max: salaryMax,
+        work_arrangement: formData.workArrangement ? [formData.workArrangement.toLowerCase()] : undefined,
+      });
+      
+      // 4. Upload resume if provided
+      if (formData.resume) {
+        const storagePath = await uploadResume(
+          user.id,
+          formData.resume.uri,
+          formData.resume.name
+        );
+        
+        if (storagePath) {
+          // Update user profile with resume URL
+          await upsertUserProfile({
+            id: user.id,
+            resume_url: storagePath,
+          });
+        }
+      }
+      
+      // 5. Update Clerk user metadata to mark onboarding as complete
+      await user.update({
+        unsafeMetadata: {
+          ...user.unsafeMetadata,
+          onboardingCompleted: true,
+          phoneNumber: formData.phoneNumber,
+          location: formData.location,
+        },
+      });
+      
+      console.log('new_user_onboarding_completed');
+      
+      // The AuthProvider in _layout.tsx will handle redirection to the main app
     } catch (error) {
       console.error('Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -138,14 +201,34 @@ export default function OnboardingScreen() {
           text: 'Skip', 
           onPress: async () => {
             if (user) {
-              await user.update({
-                unsafeMetadata: {
-                  ...user.unsafeMetadata,
-                  onboardingCompleted: true,
-                },
-              });
-              console.log('new_user_onboarding_skipped');
-              // AuthProvider will handle navigation
+              setIsLoading(true);
+              try {
+                // Save minimal profile information to Supabase
+                if (user.id) {
+                  await upsertUserProfile({
+                    id: user.id,
+                    clerk_user_id: user.id,
+                    full_name: user.fullName || '',
+                    email: user.primaryEmailAddress?.emailAddress || '',
+                  });
+                }
+                
+                // Mark onboarding as complete in Clerk
+                await user.update({
+                  unsafeMetadata: {
+                    ...user.unsafeMetadata,
+                    onboardingCompleted: true,
+                  },
+                });
+                
+                console.log('new_user_onboarding_skipped');
+                // AuthProvider will handle navigation
+              } catch (error) {
+                console.error('Error skipping onboarding:', error);
+                Alert.alert('Error', 'Failed to skip onboarding. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
             }
           }
         },
@@ -333,6 +416,13 @@ export default function OnboardingScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={primaryColor} />
+          <ThemedText style={styles.loadingText}>Saving your information...</ThemedText>
+        </View>
+      )}
+      
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -484,6 +574,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
   primaryButton: {
     flex: 1,
   },
@@ -543,9 +637,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
-  buttonText: {
-    color: 'white',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    fontWeight: '600',
+    color: 'white',
   },
 });
