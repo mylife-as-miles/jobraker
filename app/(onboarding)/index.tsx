@@ -1,11 +1,14 @@
 import { useUser } from '@clerk/clerk-expo';
+import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 // Fix imports to use named exports instead of default exports
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { uploadResume } from '@/services/storageService';
 import { upsertUserPreferences, upsertUserProfile } from '@/services/userService';
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 
@@ -141,49 +144,43 @@ export default function OnboardingScreen() {
       }
       
       // 3. Save user preferences to Supabase
-      await upsertUserPreferences({
-        user_id: user.id,
-        preferred_job_titles: formData.desiredJobTitle.split(',').map(title => title.trim()),
-        salary_min: salaryMin,
-        salary_max: salaryMax,
-        work_arrangement: formData.workArrangement ? [formData.workArrangement.toLowerCase()] : undefined,
-      });
-      
-      // 4. Upload resume if provided
-      if (formData.resume) {
-        const storagePath = await uploadResume(
-          user.id,
-          formData.resume.uri,
-          formData.resume.name
-        );
+      try {
+        // Save job preferences
+        const preferences = {
+          preferred_job_titles: [jobTitle],
+          work_arrangement: workArrangements,
+          target_locations: [{
+            city: location,
+            state: undefined,
+            country: undefined
+          }],
+          salary_min: salaryMin !== null ? salaryMin : undefined,
+          salary_max: salaryMax !== null ? salaryMax : undefined,
+        };
+
+        // Upload to Supabase
+        await upsertUserPreferences(userId, preferences);
         
-        if (storagePath) {
+        // Upload resume if present
+        if (resumeUri) {
+          const storagePath = await uploadResume(userId, resumeUri, resumeName);
+          
+          if (!storagePath) {
+            throw new Error('Failed to upload resume');
+          }
+          
           // Update user profile with resume URL
           await upsertUserProfile({
-            id: user.id,
+            id: userId,
             resume_url: storagePath,
           });
         }
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+        Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
-      
-      // 5. Update Clerk user metadata to mark onboarding as complete
-      await user.update({
-        unsafeMetadata: {
-          ...user.unsafeMetadata,
-          onboardingCompleted: true,
-          phoneNumber: formData.phoneNumber,
-          location: formData.location,
-        },
-      });
-      
-      console.log('new_user_onboarding_completed');
-      
-      // The AuthProvider in _layout.tsx will handle redirection to the main app
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-      Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
