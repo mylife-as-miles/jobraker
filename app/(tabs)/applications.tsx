@@ -61,25 +61,36 @@ const ApplicationCard = ({ application }: { application: Application }) => {
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Navigate to application details screen
-    router.push({ 
-      pathname: '/application-details', 
-      params: { id: application.id } 
+    router.push({
+      pathname: "/application-details" as any,
+      params: { id: application.id }
     });
     
     console.log('application_card_viewed_from_list', { application_id: application.id });
   };
 
   return (
-    <TouchableOpacity style={[styles.card, { backgroundColor }]} onPress={handlePress}>
-      <View style={styles.cardHeader}>
-        <ThemedText style={styles.jobTitle} numberOfLines={1}>{application.job_title}</ThemedText>
-        <ThemedText style={styles.date}>{formatDate(application.applied_at || '')}</ThemedText>
-      </View>
-      <ThemedText style={styles.company} numberOfLines={1}>{application.company_name}</ThemedText>
-      <View style={styles.statusContainer}>
-        <View style={[styles.statusIndicator, { backgroundColor: statusColor }]} />
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor }]} 
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.header}>
+        <ThemedText style={styles.jobTitle} numberOfLines={1}>
+          {application.job_title || 'Unknown Position'}
+        </ThemedText>
         <ThemedText style={[styles.status, { color: statusColor }]}>
           {getStatusText(application.status)}
+        </ThemedText>
+      </View>
+      
+      <ThemedText style={styles.company} numberOfLines={1}>
+        {application.company_name || 'Unknown Company'}
+      </ThemedText>
+      
+      <View style={styles.footer}>
+        <ThemedText style={styles.date}>
+          {formatDate(application.created_at || '')}
         </ThemedText>
       </View>
     </TouchableOpacity>
@@ -88,61 +99,45 @@ const ApplicationCard = ({ application }: { application: Application }) => {
 
 export default function ApplicationsScreen() {
   const { user } = useUser();
-  const { supabase } = useSupabase();
+  const supabase = useSupabase();
+  const router = useRouter();
+  const backgroundColor = useThemeColor({}, 'background');
+  const primaryColor = useThemeColor({}, 'tint');
+  
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const primaryColor = useThemeColor({}, 'tint');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch applications from Supabase
-  const fetchApplications = async () => {
+  // Load applications on mount and when user changes
+  useEffect(() => {
+    loadApplications();
+    console.log('applications_tab_viewed');
+  }, [user]);
+  
+  const loadApplications = async () => {
     if (!user?.id) return;
     
-    setIsLoading(true);
     try {
       const data = await getUserApplications(user.id);
       setApplications(data);
-      console.log(`Loaded ${data.length} applications`);
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      console.error('Error loading applications:', error);
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
-
-  // Setup Supabase real-time subscription for application updates
-  useEffect(() => {
-    if (!user?.id || !supabase) return;
-
-    // Log view event
-    console.log('applications_tab_viewed');
-    
-    // Fetch initial data
-    fetchApplications();
-    
-    // Setup Supabase real-time subscription for application updates
-    const subscription = supabase
-      .channel('applications-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'applications',
-          filter: `user_id=eq.${user.id}`
-        }, 
-        (payload) => {
-          console.log('Real-time update received:', payload);
-          // Refresh the applications list when changes occur
-          fetchApplications();
-        }
-      )
-      .subscribe();
-    
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [user, supabase]);
+  
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadApplications();
+  };
+  
+  const handleExploreJobs = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/explore');
+    console.log('empty_applications_explore_jobs_tapped');
+  };
 
   // Empty state component
   const EmptyState = () => (
@@ -152,11 +147,7 @@ export default function ApplicationsScreen() {
       </ThemedText>
       <TouchableOpacity 
         style={[styles.emptyStateButton, { backgroundColor: primaryColor }]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          // Navigate to Search tab
-          router.push('/(tabs)/explore');
-        }}
+        onPress={handleExploreJobs}
       >
         <ThemedText style={styles.emptyStateButtonText}>Start Searching</ThemedText>
       </TouchableOpacity>
@@ -191,7 +182,7 @@ export default function ApplicationsScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isLoading}
-              onRefresh={fetchApplications}
+              onRefresh={onRefresh}
               tintColor={primaryColor}
               colors={[primaryColor]}
             />
