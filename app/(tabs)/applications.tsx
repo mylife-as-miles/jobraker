@@ -1,58 +1,39 @@
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import ThemedText from '@/components/ThemedText';
+import ThemedView from '@/components/ThemedView';
+import useSupabase from '@/hooks/useSupabase';
 import { useThemeColor } from '@/hooks/useThemeColor';
-
-// Temporary mock data until Supabase integration is complete
-const MOCK_APPLICATIONS = [
-  {
-    id: '1',
-    job_title: 'Senior React Native Developer',
-    company_name: 'TechCorp Inc.',
-    status: 'SUBMITTED_BY_SKYVERN',
-    applied_at: new Date().toISOString(),
-    last_status_update_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    job_title: 'Frontend Engineer',
-    company_name: 'StartupXYZ',
-    status: 'PROCESSING_BY_SKYVERN',
-    applied_at: new Date(Date.now() - 86400000).toISOString(), // yesterday
-    last_status_update_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-  },
-  {
-    id: '3',
-    job_title: 'Mobile Developer',
-    company_name: 'Innovative Solutions',
-    status: 'REQUIRES_ATTENTION_USER_INPUT',
-    applied_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-    last_status_update_at: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-  },
-];
+import { Application, ApplicationStatus, getUserApplications } from '@/services/applicationService';
+import { useUser } from '@clerk/clerk-expo';
 
 // Helper function to get a human-readable status
-const getStatusText = (status: string) => {
+const getStatusText = (status: ApplicationStatus) => {
   switch (status) {
     case 'SUBMITTED_BY_SKYVERN': return 'Submitted';
     case 'PROCESSING_BY_SKYVERN': return 'Processing';
     case 'REQUIRES_ATTENTION_USER_INPUT': return 'Action Required';
     case 'FAILED_SKYVERN_SUBMISSION': return 'Failed';
+    case 'INTERVIEW_SCHEDULED': return 'Interview';
+    case 'OFFER_RECEIVED': return 'Offer Received';
+    case 'REJECTED_BY_COMPANY': return 'Rejected';
     default: return status.replace(/_/g, ' ').toLowerCase();
   }
 };
 
 // Helper function to get status color
-const getStatusColor = (status: string, colors: any) => {
+const getStatusColor = (status: ApplicationStatus, colors: any) => {
   switch (status) {
     case 'SUBMITTED_BY_SKYVERN': return colors.success;
     case 'PROCESSING_BY_SKYVERN': return colors.warning;
     case 'REQUIRES_ATTENTION_USER_INPUT': return colors.warning;
     case 'FAILED_SKYVERN_SUBMISSION': return colors.error;
+    case 'INTERVIEW_SCHEDULED': return '#4A90E2'; // Blue
+    case 'OFFER_RECEIVED': return '#8E44AD'; // Purple
+    case 'REJECTED_BY_COMPANY': return colors.error;
     default: return colors.text;
   }
 };
@@ -63,7 +44,7 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-const ApplicationCard = ({ application }: { application: any }) => {
+const ApplicationCard = ({ application }: { application: Application }) => {
   const colors = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'card');
   const statusColor = getStatusColor(application.status, {
@@ -77,10 +58,12 @@ const ApplicationCard = ({ application }: { application: any }) => {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Navigate to application details screen (to be implemented)
-    router.push({ pathname: '/application-details', params: { id: application.id } });
+    // Navigate to application details screen
+    router.push({ 
+      pathname: '/application-details', 
+      params: { id: application.id } 
+    });
     
-    // For analytics (to be implemented with actual analytics)
     console.log('application_card_viewed_from_list', { application_id: application.id });
   };
 
@@ -88,7 +71,7 @@ const ApplicationCard = ({ application }: { application: any }) => {
     <TouchableOpacity style={[styles.card, { backgroundColor }]} onPress={handlePress}>
       <View style={styles.cardHeader}>
         <ThemedText style={styles.jobTitle} numberOfLines={1}>{application.job_title}</ThemedText>
-        <ThemedText style={styles.date}>{formatDate(application.applied_at)}</ThemedText>
+        <ThemedText style={styles.date}>{formatDate(application.applied_at || '')}</ThemedText>
       </View>
       <ThemedText style={styles.company} numberOfLines={1}>{application.company_name}</ThemedText>
       <View style={styles.statusContainer}>
@@ -102,15 +85,62 @@ const ApplicationCard = ({ application }: { application: any }) => {
 };
 
 export default function ApplicationsScreen() {
-  const [applications, setApplications] = useState(MOCK_APPLICATIONS);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUser();
+  const { supabase } = useSupabase();
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+  const primaryColor = useThemeColor({}, 'tint');
 
-  // Future implementation: Fetch applications from Supabase
+  // Fetch applications from Supabase
+  const fetchApplications = async () => {
+    if (!user?.id) return;
+    
+    setIsLoading(true);
+    try {
+      const data = await getUserApplications(user.id);
+      setApplications(data);
+      console.log(`Loaded ${data.length} applications`);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Setup Supabase real-time subscription for application updates
   useEffect(() => {
-    // This would be replaced with actual Supabase query once integrated
+    if (!user?.id || !supabase) return;
+
+    // Log view event
     console.log('applications_tab_viewed');
-  }, []);
+    
+    // Fetch initial data
+    fetchApplications();
+    
+    // Setup Supabase real-time subscription for application updates
+    const subscription = supabase
+      .channel('applications-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'applications',
+          filter: `user_id=eq.${user.id}`
+        }, 
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Refresh the applications list when changes occur
+          fetchApplications();
+        }
+      )
+      .subscribe();
+    
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user, supabase]);
 
   // Empty state component
   const EmptyState = () => (
@@ -119,16 +149,27 @@ export default function ApplicationsScreen() {
         You haven't applied to any jobs yet.
       </ThemedText>
       <TouchableOpacity 
-        style={styles.emptyStateButton}
+        style={[styles.emptyStateButton, { backgroundColor: primaryColor }]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           // Navigate to Search tab
+          router.push('/(tabs)/explore');
         }}
       >
         <ThemedText style={styles.emptyStateButtonText}>Start Searching</ThemedText>
       </TouchableOpacity>
     </View>
   );
+
+  // Loading state
+  if (isLoading && applications.length === 0) {
+    return (
+      <ThemedView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={primaryColor} />
+        <ThemedText style={styles.loadingText}>Loading applications...</ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -141,15 +182,18 @@ export default function ApplicationsScreen() {
       ) : (
         <FlatList
           data={applications}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id || ''}
           renderItem={({ item }) => <ApplicationCard application={item} />}
           contentContainerStyle={styles.list}
-          refreshing={isLoading}
-          onRefresh={() => {
-            setIsLoading(true);
-            // Future: Fetch fresh data from Supabase
-            setTimeout(() => setIsLoading(false), 1000);
-          }}
+          refreshing={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={fetchApplications}
+              tintColor={primaryColor}
+              colors={[primaryColor]}
+            />
+          }
         />
       )}
     </ThemedView>
@@ -223,11 +267,18 @@ const styles = StyleSheet.create({
   emptyStateButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#007AFF', // iOS blue, can be themed with useThemeColor
     borderRadius: 8,
   },
   emptyStateButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
   },
 });
