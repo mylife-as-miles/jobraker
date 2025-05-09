@@ -52,15 +52,18 @@ export default function OnboardingScreen() {
         return;
       }
       
-      setFormData(prev => ({
-        ...prev,
-        resume: {
-          name: result.assets[0].name,
-          uri: result.assets[0].uri,
-        },
-      }));
-      
-      console.log('onboarding_resume_upload_success');
+      // Make sure assets exist before accessing
+      if (result.assets && result.assets.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          resume: {
+            name: result.assets[0].name,
+            uri: result.assets[0].uri,
+          },
+        }));
+        
+        console.log('onboarding_resume_upload_success');
+      }
     } catch (error) {
       console.error('Error picking document:', error);
       console.log('onboarding_resume_upload_failed');
@@ -147,10 +150,11 @@ export default function OnboardingScreen() {
       try {
         // Save job preferences
         const preferences = {
-          preferred_job_titles: [jobTitle],
-          work_arrangement: workArrangements,
+          user_id: user.id,
+          preferred_job_titles: [formData.desiredJobTitle],
+          work_arrangement: formData.workArrangement ? [formData.workArrangement] : undefined,
           target_locations: [{
-            city: location,
+            city: formData.location,
             state: undefined,
             country: undefined
           }],
@@ -159,11 +163,11 @@ export default function OnboardingScreen() {
         };
 
         // Upload to Supabase
-        await upsertUserPreferences(userId, preferences);
+        await upsertUserPreferences(preferences);
         
         // Upload resume if present
-        if (resumeUri) {
-          const storagePath = await uploadResume(userId, resumeUri, resumeName);
+        if (formData.resume?.uri) {
+          const storagePath = await uploadResume(user.id, formData.resume.uri, formData.resume.name);
           
           if (!storagePath) {
             throw new Error('Failed to upload resume');
@@ -171,16 +175,31 @@ export default function OnboardingScreen() {
           
           // Update user profile with resume URL
           await upsertUserProfile({
-            id: userId,
+            id: user.id,
             resume_url: storagePath,
           });
         }
+        
+        // Mark onboarding as complete in Clerk
+        await user.update({
+          unsafeMetadata: {
+            ...user.unsafeMetadata,
+            onboardingCompleted: true,
+          },
+        });
+        
+        console.log('new_user_onboarding_completed');
+        // AuthProvider will handle navigation
       } catch (error) {
         console.error('Error completing onboarding:', error);
         Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
       } finally {
         setIsLoading(false);
       }
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
+      setIsLoading(false);
     }
   };
 
