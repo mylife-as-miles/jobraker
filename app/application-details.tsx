@@ -130,7 +130,7 @@ export default function ApplicationDetailsScreen() {
 
   const handleSaveNotes = () => {
     // In a real app, this would update Supabase
-    setApplication(prev => ({ ...prev, notes }));
+    setApplication((prev: any) => ({ ...prev, notes }));
     setIsEditingNotes(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     console.log('application_notes_updated', { applicationId });
@@ -149,7 +149,7 @@ export default function ApplicationDetailsScreen() {
           style: 'destructive',
           onPress: () => {
             // In a real app, this would update status in Supabase
-            setApplication(prev => ({ 
+            setApplication((prev: any) => ({ 
               ...prev, 
               status: 'WITHDRAWN_BY_USER',
               last_status_update_at: new Date().toISOString()
