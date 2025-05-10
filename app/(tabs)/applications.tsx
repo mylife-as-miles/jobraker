@@ -60,11 +60,8 @@ const ApplicationCard = ({ application }: { application: Application }) => {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Navigate to application details screen
-    router.push({
-      pathname: "/application-details",
-      params: { id: application.id }
-    });
+    // Navigate to application details screen with params
+    router.push("/(tabs)/application-details" as any);
     
     console.log('application_card_viewed_from_list', { application_id: application.id });
   };
@@ -75,7 +72,7 @@ const ApplicationCard = ({ application }: { application: Application }) => {
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <View style={styles.header}>
+      <View style={styles.cardHeader}>
         <ThemedText style={styles.jobTitle} numberOfLines={1}>
           {application.job_title || 'Unknown Position'}
         </ThemedText>
@@ -88,7 +85,7 @@ const ApplicationCard = ({ application }: { application: Application }) => {
         {application.company_name || 'Unknown Company'}
       </ThemedText>
       
-      <View style={styles.footer}>
+      <View style={styles.statusContainer}>
         <ThemedText style={styles.date}>
           {formatDate(application.created_at || '')}
         </ThemedText>
@@ -274,4 +271,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
   },
+  header: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    marginBottom: 12,
+  },
+  footer: {
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    marginTop: 12,
+  }
 });
