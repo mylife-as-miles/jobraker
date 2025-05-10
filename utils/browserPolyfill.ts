@@ -98,7 +98,46 @@ if (!globalObj.workletFn) {
   };
 }
 
-// Define proc as a function that returns a worklet-compatible object
+// Define and polyfill all necessary functions for react-native-reanimated
+// This is a comprehensive set of polyfills for Reanimated web compatibility
+
+// proc function - core to Reanimated worklets
+if (typeof globalObj.proc !== 'function') {
+  globalObj.proc = function proc(fn) {
+    // Return the original function or a no-op function if input isn't a function
+    return typeof fn === 'function' ? fn : () => {};
+  };
+}
+
+// Make sure proc is accessible in all relevant scopes
+if (typeof global !== 'undefined' && typeof global.proc !== 'function') {
+  global.proc = globalObj.proc;
+}
+
+if (typeof window !== 'undefined' && typeof window.proc !== 'function') {
+  window.proc = globalObj.proc;
+}
+
+// Additional Reanimated-related polyfills
+// Worklet context is used by Reanimated for its internal processing
+if (typeof globalObj.__reanimatedWorkletInit === 'undefined') {
+  globalObj.__reanimatedWorkletInit = function(worklet) {
+    return worklet;
+  };
+}
+
+// Ensure makeShareable and makeMutable exist (used in Reanimated 2+)
+if (typeof globalObj.makeShareable !== 'function') {
+  globalObj.makeShareable = function(value) { 
+    return value; 
+  };
+}
+
+if (typeof globalObj.makeMutable !== 'function') {
+  globalObj.makeMutable = function(value) { 
+    return { value }; 
+  };
+}
 if (typeof globalObj.proc !== 'function') {
   globalObj.proc = function() {
     return {
