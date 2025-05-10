@@ -1,3 +1,7 @@
+// Import polyfills first to ensure proper environment setup
+import '@/utils/browserPolyfill';
+import '@/utils/reanimated-web-init';
+
 import { Colors } from '@/constants/Colors';
 import { useWarmUpBrowser } from '@/hooks/useWarmUpBrowser';
 import { useOAuth, useSignIn, useSignUp } from '@clerk/clerk-expo';
