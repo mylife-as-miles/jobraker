@@ -264,18 +264,18 @@ export default function ProfileScreen() {
   const handleEditPersonalInfo = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Navigate to personal info edit screen
-    router.push("/profile/edit-personal-info");
+    router.push("/(tabs)/profile/edit-personal-info" as any);
   };
 
   const handleEditJobPreferences = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('edit_job_preferences_opened');
     // Navigate to job preferences edit screen
-    router.push("/profile/edit-job-preferences");
+    router.push("/(tabs)/profile/edit-job-preferences" as any);
   };
 
   const handleDeleteAccount = () => {
-    Haptics.impactAsync(Haptics.NotificationFeedbackType.Heavy);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     Alert.alert(
       'Delete Account',
