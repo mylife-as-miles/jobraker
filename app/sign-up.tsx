@@ -9,26 +9,27 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  Animated,
+  ColorValue,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import Reanimated, {
-    FadeIn,
-    FadeInDown,
-    FadeInUp,
-    SlideInRight,
-    useAnimatedStyle,
-    useSharedValue,
-    withSequence,
-    withTiming
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  SlideInRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming
 } from 'react-native-reanimated';
 
 // Ensure WebBrowser completes authentication session
@@ -107,7 +108,7 @@ const FloatingLabelInput = ({
   }, [isFocused, value]);
 
   const labelStyle = {
-    position: 'absolute',
+    position: 'absolute' as 'absolute',
     left: animatedLabelPosition.interpolate({
       inputRange: [0, 1],
       outputRange: [12, 12],
@@ -127,7 +128,7 @@ const FloatingLabelInput = ({
     backgroundColor: isFocused ? Colors.dark.background : 'transparent',
     paddingHorizontal: isFocused ? 5 : 0,
     zIndex: 1,
-  };
+  } as Animated.AnimatedProps<any>;
 
   const containerStyle = {
     borderColor: error ? '#ff6961' : animatedBorderWidth.interpolate({
@@ -242,7 +243,7 @@ const AnimatedButton = ({
       >
         {gradient ? (
           <LinearGradient
-            colors={['#4A80F0', '#22AEFF'] as readonly string[]}
+            colors={['#4A80F0', '#22AEFF'] as unknown as [ColorValue, ColorValue]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}
@@ -518,7 +519,7 @@ export default function SignUpScreen() {
   const handleGoogleSignIn = async () => {
     try {
       const { createdSessionId, setActive } = await startGoogleOAuthFlow();
-      if (createdSessionId) {
+      if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
         router.push('/');
       }
@@ -792,7 +793,7 @@ export default function SignUpScreen() {
     >
       <Reanimated.View style={[styles.backgroundGradient, backgroundAnimatedStyle]}>
         <LinearGradient
-          colors={['rgba(20, 20, 35, 0.8)', 'rgba(30, 30, 50, 0.9)', 'rgba(15, 15, 25, 1)']}
+          colors={['rgba(20, 20, 35, 0.8)', 'rgba(30, 30, 50, 0.9)', 'rgba(15, 15, 25, 1)'] as unknown as [ColorValue, ColorValue, ColorValue]}
           style={styles.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -809,9 +810,8 @@ export default function SignUpScreen() {
           <Text style={styles.successText}>Please verify your email to continue.</Text>
           <Progress.Bar 
             progress={1} 
-            width={200} 
             color="#77dd77" 
-            style={{marginTop: 20}} 
+            style={{marginTop: 20, width: 200}} 
           />
         </Reanimated.View>
       ) : (
