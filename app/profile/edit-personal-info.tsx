@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, ScrollView } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import * as Haptics from 'expo-haptics';
-import { TextInput } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
