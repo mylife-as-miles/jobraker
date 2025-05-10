@@ -8,6 +8,7 @@ import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  ColorValue,
   Dimensions, KeyboardAvoidingView, Platform,
   Pressable,
   ScrollView,
@@ -174,7 +175,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({ title, onPress, isLoading
 const AnimatedGradient: React.FC<{ colors: string[] }> = ({ colors }) => {
   return (
     <LinearGradient
-      colors={colors}
+      colors={colors as unknown as [ColorValue, ColorValue, ...ColorValue[]]}
       style={StyleSheet.absoluteFillObject}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -482,7 +483,7 @@ export default function SignInScreen() {
       style={styles.container}
     >
       <LinearGradient
-        colors={['#4A80F0', '#22AEFF'] as readonly string[]}
+        colors={['#4A80F0', '#22AEFF'] as unknown as [ColorValue, ColorValue]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
