@@ -1,3 +1,7 @@
+// Import polyfill and reanimated initialization first
+import '@/utils/browserPolyfill';
+import '@/utils/reanimated-web-init';
+
 import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import Constants from "expo-constants";
@@ -6,7 +10,8 @@ import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import 'react-native-reanimated';
+import { Platform } from 'react-native';
+// Conditionally import 'react-native-gesture-handler' to avoid web issues
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { setSupabaseToken } from '@/utils/supabase';
@@ -17,14 +22,25 @@ SplashScreen.preventAutoHideAsync();
 const tokenCache = {
   async getToken(key: string) {
     try {
-      return SecureStore.getItemAsync(key);
+      // Use SecureStore on native platforms
+      if (Platform.OS !== 'web') {
+        return SecureStore.getItemAsync(key);
+      }
+      // Use localStorage on web
+      return localStorage.getItem(key);
     } catch (err) {
       return null;
     }
   },
   async saveToken(key: string, value: string) {
     try {
-      return SecureStore.setItemAsync(key, value);
+      // Use SecureStore on native platforms
+      if (Platform.OS !== 'web') {
+        return SecureStore.setItemAsync(key, value);
+      }
+      // Use localStorage on web
+      localStorage.setItem(key, value);
+      return;
     } catch (err) {
       return;
     }
@@ -128,13 +144,25 @@ export default function RootLayout() {
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="sign-in" />
-            <Stack.Screen name="sign-up" />
-            <Stack.Screen name="(onboarding)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="+not-found" />
-          </Stack>
+          {Platform.OS === 'web' ? (
+            // On web, we don't wrap with GestureHandlerRootView to avoid issues
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="sign-in" />
+              <Stack.Screen name="sign-up" />
+              <Stack.Screen name="(onboarding)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          ) : (
+            // On native, we use GestureHandlerRootView through import('react-native-gesture-handler')
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="sign-in" />
+              <Stack.Screen name="sign-up" />
+              <Stack.Screen name="(onboarding)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          )}
         </AuthProvider>
         <StatusBar style="auto" />
       </ThemeProvider>
